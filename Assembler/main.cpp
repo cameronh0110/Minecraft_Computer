@@ -6,42 +6,106 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <bitset>
 
 using namespace std;
 
-string assemble(vector<string> tokens){
+//map global variables
+unordered_map<string, string> inst_map;
+unordered_map<string, function<string(vector<string>&)>> asm_map;
+
+//returns binary string format of given number
+string ToBinary(string input, int digits){
+    bitset<8> binary(stoi(input));
+    string ret = binary.to_string().substr(8 - digits);
+    return ret;
+}
+
+/*
+Processes ALU 2 op instructions
+*/
+string Alu2op(vector<string> &tokens){
     string ret;
-    string inst = tokens.at(0);
     
+    if(tokens.size() != 4){cout << "ERROR: Incorrect Number of arguments" << endl; return "ERR";}
+
+    //convert instruction into binary machine code
+    ret = inst_map[tokens.at(0)] + ToBinary(tokens.at(1), 4) + " " + ToBinary(tokens.at(2), 4) + " " + ToBinary(tokens.at(3), 4) + " ";
+
+    return ret;
+}
+
+/*
+Processes all instructions not involving alu dual read
+*/
+string GenericOp(vector<string> &tokens){
+    string ret;
+    
+    //insert blank space for shifts and flow instructions
+    if(tokens.at(0) == "SHL" || tokens.at(0) == "SHR"){
+        tokens.insert(tokens.begin() + 1, "0");
+    }
+    if(tokens.at(0) == "GOTO" || tokens.at(0) == "GOTO-PTR" || tokens.at(0) == "BRC"){
+        tokens.push_back("0");
+    }
+    if(tokens.at(0) == "END"){
+        tokens.push_back("0");
+        tokens.push_back("0");
+    }
+
+    if(tokens.size() != 3){cout << "ERROR: Incorrect number of arguments" << endl; return "ERR";}
+
+    //convert instruction into binary machine code
+    ret = inst_map[tokens.at(0)] + ToBinary(tokens.at(1), 8).substr(0, 4) + " " + ToBinary(tokens.at(1), 8).substr(4) + " " + ToBinary(tokens.at(2), 4) + " ";
+
     return ret;
 }
 
 //initializes a map to convert opcodes to binary
-unordered_map<string, string> Init_Inst_Map(){
-    unordered_map<string, string> inst_map;
-    
-    //alu 2 op
+void Init_Inst_Map(){
+    //Alu 2 op
     inst_map["ADD"]         = "0000 ";
     inst_map["SUB"]         = "0001 ";
     inst_map["XOR"]         = "0010 ";
     inst_map["AND"]         = "0011 ";
-    //alu immediate
+    //Alu immediate
     inst_map["ADDI"]        = "0100 ";
     inst_map["SUBI"]        = "0101 ";
     inst_map["SHL"]         = "0110 ";
     inst_map["SHR"]         = "0111 ";
-    //memory
+    //Memory
     inst_map["LDUR-ADR"]    = "1000 ";
-    inst_map["SDUR-ADR"]    = "1001 ";
-    inst_map["LDUR-ADR"]    = "1010 ";
-    inst_map["SDUR-ADR"]    = "1011 ";
-    //flow
+    inst_map["STUR-ADR"]    = "1001 ";
+    inst_map["LDUR-PTR"]    = "1010 ";
+    inst_map["STUR-PTR"]    = "1011 ";
+    //Flow
     inst_map["GOTO"]        = "1100 ";
     inst_map["GOTO-PTR"]    = "1101 ";
     inst_map["BRC"]         = "1110 ";
     inst_map["END"]         = "1111 ";
+}
 
-    return inst_map;
+void Init_Assembler_Map(){
+    //ALU 2 Op
+    asm_map["ADD"]      = Alu2op;
+    asm_map["SUB"]      = Alu2op;
+    asm_map["XOR"]      = Alu2op;
+    asm_map["AND"]      = Alu2op;
+    //ALU immediate
+    asm_map["ADDI"]     = GenericOp;
+    asm_map["SUBI"]     = GenericOp;
+    asm_map["SHL"]      = GenericOp;
+    asm_map["SHR"]      = GenericOp;
+    //Memory
+    asm_map["LDUR-ADR"] = GenericOp;
+    asm_map["STUR-ADR"] = GenericOp;
+    asm_map["LDUR-PTR"] = GenericOp;
+    asm_map["STUR-PTR"] = GenericOp;
+    //Flow
+    asm_map["GOTO"]     = GenericOp;
+    asm_map["GOTO-PTR"] = GenericOp;
+    asm_map["BRC"]      = GenericOp;
+    asm_map["END"]      = GenericOp;
 }
 
 int main(int argc, char **argv){
@@ -66,7 +130,13 @@ int main(int argc, char **argv){
     } else {
         outputFileName = inputFileName.substr(0, inputFileName.find('.')) + ".mcbin";
     }
-    
+
+    /*
+    Init maps
+    */
+    Init_Inst_Map();
+    Init_Assembler_Map();
+
     /*
     File management
     */
@@ -90,8 +160,11 @@ int main(int argc, char **argv){
     /*
     Read and process file
     */
-    int outLine = 0;    //line of the output file
-    int inLine = 0;     //line from input file being process
+    int outLine = 0;        //line of the output file
+    int inLine = 0;         //line from input file being process
+    bool success = true;    //bool for success
+    vector<string> errors;  //stores errors to output after completion
+    cout << "___Human Transferable Output___________________________________" << endl;
     while(!fin.eof()){
         //read line and create a vector of tokens
         getline(fin, read);
@@ -105,19 +178,41 @@ int main(int argc, char **argv){
             tokens.push_back(read);
         }
 
-        
-
         //if there are valid tokens, process and output them. Output is a string, as the binary code must be manually copied to ROM in game
+        string assembled;   //assembled instruction
+        string error;       //error code
         if(tokens.size()){
-            cout << setw(3) << setfill('0') << outLine << ": 0000 0000 0000 0000 ";
+            //assemble line or return error
+            if(asm_map.find(tokens.at(0)) != asm_map.end()){
+                assembled = asm_map[tokens.at(0)](tokens);
+            } else {
+                assembled = "XXXX XXXX XXXX XXXX ";
+                error = "Error at line " + to_string(inLine) + " Invalid Instruction";
+                errors.push_back(error);
+                success = false;
+            }
+            fout << assembled << endl;
+            cout << setw(3) << setfill('0') << outLine << " | " << assembled << "| ";
             for(int i = 0; i < tokens.size(); i++){
-                cout << tokens.at(i) << " ";
+                cout << setw(8) << setfill(' ') << tokens.at(i) << " ";
             };
             cout << endl;
             
             outLine++;
         }
-        
+    }
+    
+    /*
+    print diagnostic info
+    */
+    cout << endl;
+    for(int i = 0; i < errors.size(); i++){
+        cout << errors.at(i) << endl;
+    }
+    if(!success){
+        cout << endl << "Assembly failed, check log for details" << endl << endl;
+    } else {
+        cout << "Successfully compiled to " << outputFileName << endl << endl;
     }
     return 1;
 
