@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Assembler",
-      "program": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Assembler/build/Debug/outDebug",
+      "cwd": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Virtual_Machine",
+      "program": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Virtual_Machine/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

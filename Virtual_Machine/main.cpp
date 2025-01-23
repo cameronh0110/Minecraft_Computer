@@ -13,6 +13,7 @@ int speed;
 
 //global component variables
 ifstream fin;
+string ROM[255];
 int cache[16];
 int memory[255];
 
@@ -56,7 +57,6 @@ void zero(){
     gpaioBus = 0;
     gpaioAdr = 0;
 
-    pc = 0;
     opcode = 0;
     instArgA = 0;
     instArgB = 0;
@@ -64,14 +64,14 @@ void zero(){
 }
 
 void printState(){
-    cout << "Cache Status: " << "Read Adr A: " << setw(2) << setfill('0') << readAdrA << " \t Read Adr B: " << setw(2) << setfill('0') << readAdrB << " \t Write Adr: " << setw(2) << setfill('0') << readAdrB << endl;
+    cout << "Cache Status: " << "Read Adr A: " << setw(2) << setfill('0') << readAdrA << " \t Read Adr B: " << setw(2) << setfill('0') << readAdrB << " \t Write Adr: " << setw(2) << setfill('0') << writeAdr << endl;
     cout << "              Read A:    " << setw(3) << setfill('0') << readA << " \t Read B:    " << setw(3) << setfill('0') << readB << " \t Write:    " << setw(3) << setfill('0') << write << endl;
     cout << endl;
     cout << "ALU Status:   " << "OP:          " << ALUOP << " \t Output:    " << setw(3) << setfill('0') << ALUout << endl;
     cout << "              OP A:      " << setw(3) << setfill('0') << ALUA << " \t OP B:      " << setw(3) << setfill('0') << ALUB << endl;
     cout << endl;
     cout << "GPAIO Status: Value:     " << setw(3) << setfill('0') << gpaioBus << "\t Address:   " << setw(3) << setfill('0') << gpaioAdr << endl;
-    cout << "Inst " << setw(3) << setfill('0') << pc << ": " << instArgA << " " << instArgB << " " << instArgC << endl;
+    cout << "Inst " << setw(3) << setfill('0') << pc << ": " << setw(2) << setfill('0') <<  opcode << " " << setw(2) << setfill('0') <<  instArgA << " " << setw(2) << setfill('0') <<  instArgB << " " << setw(2) << setfill('0') <<  instArgC << endl;
     cout << endl;
     cout << "Cache   | RAM" << endl;
     cout << "________|_______________________________________________________________________________________________________________________________________________" << endl;
@@ -84,12 +84,81 @@ void printState(){
     }
 }
 
-int StringBinaryToInt(string input){
+void LoadROM(){
+    string input;
+    int i = 0;
+    while(getline(fin, input)){
+        ROM[i] = input;
+        i++;
+    }
+}
 
+int StringBinaryToInt(string in){
+    string input = in;
+    //cout << input;
+    bitset<32> bin(input);
+    int ret = static_cast<int>(bin.to_ulong());
+    return ret;
 }
 
 void InstructionProcessor(){
-    string input;
+    string input = ROM[pc];
+    stringstream str;
+    str << input;
+    str >> input;
+    opcode = StringBinaryToInt(input);
+    str >> input;
+    instArgA = StringBinaryToInt(input);
+    str >> input;
+    instArgB = StringBinaryToInt(input);
+    str >> input;
+    instArgC = StringBinaryToInt(input);
+}
+
+void SetAddrLines(){
+    //ALU 2 Op
+    if(opcode <= 3){
+        readAdrA = instArgA;
+        readAdrB = instArgB;
+        readA = cache[readAdrA];
+        readB = cache[readAdrB];
+        writeAdr = instArgC;
+    } else if(opcode <= 7){
+        readAdrA = instArgA;
+        readAdrB = instArgC;
+        readA = cache[readAdrA];
+        readB = cache[readAdrB];
+        writeAdr = instArgC;
+    } else if(opcode <= 11){
+        //TODO
+    } else if(opcode <= 15){
+        //todo
+    }
+}
+
+void BusIn(){
+    if(opcode <= 3){
+        ALUA = readA;
+        ALUB = readB;
+        ALUOP = opcode;
+    } else if(opcode <= 7){
+        ALUA = instArgA*16 + instArgB;
+        ALUB = readB;
+        ALUOP = opcode;
+    }
+}
+
+void ALU(){
+    if(ALUOP == 0 || ALUOP == 4){ALUout =  ALUA + ALUB; write = ALUout;}
+    if(ALUOP == 1 || ALUOP == 5){ALUout = -ALUA + ALUB; write = ALUout;}
+}
+
+void Write(){
+    if(opcode <= 7){
+        cache[writeAdr] = write;
+    }
+
+    cache[0] = 0;
 }
 
 void loop(){
@@ -97,10 +166,19 @@ void loop(){
         system("clear");
         zero();
 
+        InstructionProcessor();
+        SetAddrLines();
+        BusIn();
+        ALU();
+        Write();
+
         printState();
         cout << "Iteration: " << iteration << endl;
         iteration++;
         this_thread::sleep_for(chrono::milliseconds(speed));
+
+        //TODO flow control
+        pc++;
     }
     
 }
@@ -110,11 +188,13 @@ int main(int argc, char **argv){
         cout << "Error: expected filename for rom" << endl;
         return 1;
     }
-
-    fin.open(argv[0]);
+    string fileName = argv[1];
+    fin.open(fileName);
     if(!fin.is_open()){
         cout << "Error: Could not open file" << endl;
     }
+    LoadROM();
+    cout << "ROM Loaded: " << fileName << endl;
 
     cout << "Enter max clock speed for simulation: ";
     cin >> speed;
