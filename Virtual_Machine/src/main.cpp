@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 #include <bitset>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -16,8 +17,8 @@ ifstream fin;
 string ROM[255];
 int cache[16];
 int memory[255];
-bool cacheUpdate[16];
-bool memoryUpdate[255];
+int cacheUpdate[16];
+int memoryUpdate[255];
 
 //global bus variables
 int readAdrA;
@@ -80,17 +81,21 @@ void printState(){
     cout << "Cache   | RAM" << endl;
     cout << "________|_______________________________________________________________________________________________________________________________________________" << endl;
     for(int i = 0; i < 16; i++){
-        if(cacheUpdate[i]){
+        if(cacheUpdate[i] == 1){
             color = "\033[33m";
-            cacheUpdate[i] = 0;
+            cacheUpdate[i] = 2;
+        } else if (cacheUpdate[i] == 2){
+            color = "\033[32m";
         } else {
             color = "\033[0m";
         }
         cout << "\033[90m" << setw(2) << setfill('0') << i << "| " << color << setw(3) << setfill('0') << cache[i] << "\033[0m | ";
         for(int j = 0; j < 16; j++){
-            if(memoryUpdate[(16*j) + i]){
+            if(memoryUpdate[(16*j) + i] == 1){
                 color = "\033[33m";
-                memoryUpdate[(16*j) + i] = 0;
+                memoryUpdate[(16*j) + i] = 2;
+            } else if(memoryUpdate[(16*j) + i] == 2){
+                color = "\033[32m";
             } else {
                 color = "\033[0m";
             }
@@ -288,7 +293,18 @@ void loop(){
     
 }
 
+void Randomize(){
+    srand(time(0));
+    for(int i = 0; i < 16; i++){    
+        cache[i] = rand() % 255;
+    }
+    for(int i = 0; i < 255; i++){    
+        memory[i] = rand() % 255;
+    }
+}
+
 int main(int argc, char **argv){
+    char input;
     if(!argc){
         cout << "Error: expected filename for rom" << endl;
         return 1;
@@ -303,6 +319,11 @@ int main(int argc, char **argv){
 
     cout << "Enter max clock speed for simulation: ";
     cin >> speed;
+    cout << "Randomize memory? (y/n): ";
+    cin >> input;
+    if(tolower(input) == 'y'){
+        Randomize();
+    }
     speed = 1000/speed;
 
     loop();
