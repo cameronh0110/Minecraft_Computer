@@ -131,8 +131,8 @@ void SetAddrLines(){
         writeAdr = instArgC;
     } else if(opcode <= 11){
     } else if(opcode == 12){
-        readAdrA = 0;
-        readAdrB = instArgB;
+        readAdrA = instArgA;
+        readAdrB = instArgC;
         readA = cache[readAdrA];
         readB = cache[readAdrB];
         writeAdr = instArgC;
@@ -161,7 +161,7 @@ void BusIn(){
     } else if(opcode <= 11){
         //TODO
     } else if(opcode == 12){
-        ALUA = readA;
+        ALUA = instArgA*16 + instArgB;
         ALUB = readB;
         writeAdr = instArgC;
     } else if(opcode == 13){
@@ -229,7 +229,7 @@ int main(int argc, char **argv){
         cout << "Error: expected filename for rom" << endl;
         return 1;
     }
-    string fileName = "fib.mcbin";//argv[1];
+    string fileName = argv[1];
     fin.open(fileName);
     if(!fin.is_open()){
         cout << "Error: Could not open file" << endl;
