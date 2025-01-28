@@ -42,10 +42,10 @@ string GenericOp(vector<string> &tokens){
     string ret;
     
     //insert blank space for shifts and flow instructions
-    if(tokens.at(0) == "SHL" || tokens.at(0) == "SHR"){
+    if(tokens.at(0) == "SHL" || tokens.at(0) == "SHR" || tokens.at(0) == "GOTO-PTR"){
         tokens.insert(tokens.begin() + 1, "0");
     }
-    if(tokens.at(0) == "GOTO" || tokens.at(0) == "GOTO-PTR" || tokens.at(0) == "BRC"){
+    if(tokens.at(0) == "GOTO" || tokens.at(0) == "BRC"){
         tokens.push_back("0");
     }
     if(tokens.at(0) == "END"){

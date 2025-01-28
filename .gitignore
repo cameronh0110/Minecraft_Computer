@@ -2,3 +2,4 @@
 assembler
 *.mcasm
 *.mcbin
+*/build

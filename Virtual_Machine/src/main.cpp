@@ -130,9 +130,22 @@ void SetAddrLines(){
         readB = cache[readAdrB];
         writeAdr = instArgC;
     } else if(opcode <= 11){
-        //TODO
-    } else if(opcode <= 15){
-        //todo
+    } else if(opcode == 12){
+        readAdrA = 0;
+        readAdrB = instArgB;
+        readA = cache[readAdrA];
+        readB = cache[readAdrB];
+        writeAdr = instArgC;
+    } else if(opcode == 13){
+        readAdrA = 0;
+        readAdrB = 0;
+        readA = cache[readAdrA];
+        readB = cache[readAdrB];
+        writeAdr = instArgC;
+    } else if(opcode == 14){
+        writeAdr = instArgC;
+    } else if(opcode == 15){
+        writeAdr = instArgC;
     }
 }
 
@@ -145,6 +158,24 @@ void BusIn(){
         ALUA = instArgA*16 + instArgB;
         ALUB = readB;
         ALUOP = opcode;
+    } else if(opcode <= 11){
+        //TODO
+    } else if(opcode == 12){
+        ALUA = readA;
+        ALUB = readB;
+        writeAdr = instArgC;
+    } else if(opcode == 13){
+        ALUA = readA;
+        ALUB = pc;
+        writeAdr = instArgC;
+    } else if(opcode == 14){
+        ALUA = readA;
+        ALUB = readB;
+        writeAdr = instArgC;
+    } else if(opcode == 15){
+        ALUA = readA;
+        ALUB = readB;
+        writeAdr = instArgC;
     }
 }
 
@@ -153,15 +184,26 @@ void ALU(){
     if(ALUOP == 1 || ALUOP == 5){ALUout = -ALUA + ALUB; write = ALUout;}
 }
 
+void Flow(){
+    if(opcode == 12){
+        pc = ALUout;
+    } else {
+        pc++;
+    }
+}
+
 void Write(){
     if(opcode <= 7){
-        cache[writeAdr] = write;
+        cache[writeAdr] = ALUout;
+    } else if(opcode == 13){
+        cache[writeAdr] = ALUout;
     }
 
     cache[0] = 0;
 }
 
 void loop(){
+    pc = 0;
     while(true){
         system("clear");
         zero();
@@ -171,14 +213,13 @@ void loop(){
         BusIn();
         ALU();
         Write();
+        Flow();
 
         printState();
         cout << "Iteration: " << iteration << endl;
         iteration++;
         this_thread::sleep_for(chrono::milliseconds(speed));
-
-        //TODO flow control
-        pc++;
+        //cin.get();
     }
     
 }
@@ -188,7 +229,7 @@ int main(int argc, char **argv){
         cout << "Error: expected filename for rom" << endl;
         return 1;
     }
-    string fileName = argv[1];
+    string fileName = "fib.mcbin";//argv[1];
     fin.open(fileName);
     if(!fin.is_open()){
         cout << "Error: Could not open file" << endl;
