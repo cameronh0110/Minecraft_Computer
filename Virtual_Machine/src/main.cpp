@@ -130,7 +130,6 @@ void SetAddrLines(){
         readA = cache[readAdrA];
         readB = cache[readAdrB];
         writeAdr = instArgC;
-    } else if(opcode <= 11){
     } else if(opcode == 12){
         readAdrA = instArgA;
         readAdrB = instArgC;
@@ -224,6 +223,19 @@ void Write(){
 
     cache[0] = 0;
 }
+/*TODO: reimplement this logic so that bus simulation works
+*/
+void GPAIO(){
+    if(opcode == 8){
+        cache[instArgC] = memory[instArgA*16 + instArgB];
+    } else if(opcode == 9){
+        memory[instArgA*16 + instArgB] = cache[instArgC];
+    } else if(opcode == 10){
+        cache[instArgC] = memory[cache[instArgB]];
+    } else if(opcode == 11){
+        memory[cache[instArgB]] = cache[instArgC];
+    }
+}
 
 void loop(){
     pc = 0;
@@ -236,6 +248,7 @@ void loop(){
         SetAddrLines();
         BusIn();
         ALU();
+        GPAIO();
         Write();
         Flow();
 
