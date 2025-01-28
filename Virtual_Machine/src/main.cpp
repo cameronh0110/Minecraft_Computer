@@ -16,6 +16,8 @@ ifstream fin;
 string ROM[255];
 int cache[16];
 int memory[255];
+bool cacheUpdate[16];
+bool memoryUpdate[255];
 
 //global bus variables
 int readAdrA;
@@ -65,6 +67,7 @@ void zero(){
 }
 
 void printState(){
+    string color = "\033[0m";
     cout << "Cache Status: " << "Read Adr A: " << setw(2) << setfill('0') << readAdrA << " \t Read Adr B: " << setw(2) << setfill('0') << readAdrB << " \t Write Adr: " << setw(2) << setfill('0') << writeAdr << endl;
     cout << "              Read A:    " << setw(3) << setfill('0') << readA << " \t Read B:    " << setw(3) << setfill('0') << readB << " \t Write:    " << setw(3) << setfill('0') << write << endl;
     cout << endl;
@@ -77,9 +80,21 @@ void printState(){
     cout << "Cache   | RAM" << endl;
     cout << "________|_______________________________________________________________________________________________________________________________________________" << endl;
     for(int i = 0; i < 16; i++){
-        cout << "\033[90m" << setw(2) << setfill('0') << i << "|\033[0m " << setw(3) << setfill('0') << cache[i] << " | ";
+        if(cacheUpdate[i]){
+            color = "\033[33m";
+            cacheUpdate[i] = 0;
+        } else {
+            color = "\033[0m";
+        }
+        cout << "\033[90m" << setw(2) << setfill('0') << i << "| " << color << setw(3) << setfill('0') << cache[i] << "\033[0m | ";
         for(int j = 0; j < 16; j++){
-                cout << "\033[90m" << setw(3) << setfill('0') << (16*j) + i << ":\033[0m" << setw(3) << setfill('0') << memory[(16*j) + i] << "  ";
+            if(memoryUpdate[(16*j) + i]){
+                color = "\033[33m";
+                memoryUpdate[(16*j) + i] = 0;
+            } else {
+                color = "\033[0m";
+            }
+                cout << "\033[90m" << setw(3) << setfill('0') << (16*j) + i << ":" << color << setw(3) << setfill('0') << memory[(16*j) + i] << "\033[0m" << "  ";
             }
         cout << endl;
     }
@@ -217,8 +232,10 @@ void Flow(){
 void Write(){
     if(opcode <= 7){
         cache[writeAdr] = ALUout;
+        cacheUpdate[writeAdr] = 1;
     } else if(opcode == 13){
         cache[writeAdr] = ALUout;
+        cacheUpdate[writeAdr] = 1;
     }
 
     cache[0] = 0;
@@ -228,12 +245,16 @@ void Write(){
 void GPAIO(){
     if(opcode == 8){
         cache[instArgC] = memory[instArgA*16 + instArgB];
+        cacheUpdate[instArgC] = 1;
     } else if(opcode == 9){
         memory[instArgA*16 + instArgB] = cache[instArgC];
+        memoryUpdate[instArgA*16 + instArgB] = 1;
     } else if(opcode == 10){
         cache[instArgC] = memory[cache[instArgB]];
+        cacheUpdate[instArgC] = 1;
     } else if(opcode == 11){
         memory[cache[instArgB]] = cache[instArgC];
+        memoryUpdate[cache[instArgB]] = 1;
     }
 }
 
@@ -253,9 +274,15 @@ void loop(){
         Flow();
 
         printState();
-        cout << "Iteration: " << iteration << endl;
-        iteration++;
-        this_thread::sleep_for(chrono::milliseconds(speed));
+        if(opcode == 15){
+            cout << "END signal received from code: exiting..." << endl;
+            this_thread::sleep_for(chrono::seconds(2));
+            return;
+        } else { 
+            cout << "Iteration: " << iteration << endl;
+            iteration++;
+            this_thread::sleep_for(chrono::milliseconds(speed));
+        }
         //cin.get();
     }
     
