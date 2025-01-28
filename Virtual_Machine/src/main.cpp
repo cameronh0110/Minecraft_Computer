@@ -29,6 +29,7 @@ int ALUOP;
 int ALUA;
 int ALUB;
 int ALUout;
+int ALUflag;
 
 int gpaioBus;
 int gpaioAdr;
@@ -67,7 +68,7 @@ void printState(){
     cout << "Cache Status: " << "Read Adr A: " << setw(2) << setfill('0') << readAdrA << " \t Read Adr B: " << setw(2) << setfill('0') << readAdrB << " \t Write Adr: " << setw(2) << setfill('0') << writeAdr << endl;
     cout << "              Read A:    " << setw(3) << setfill('0') << readA << " \t Read B:    " << setw(3) << setfill('0') << readB << " \t Write:    " << setw(3) << setfill('0') << write << endl;
     cout << endl;
-    cout << "ALU Status:   " << "OP:          " << ALUOP << " \t Output:    " << setw(3) << setfill('0') << ALUout << endl;
+    cout << "ALU Status:   " << "OP:          " << ALUOP << " \t Output:    " << setw(3) << setfill('0') << ALUout << " \t Flag:     " << setw(3) << setfill('0') << ALUflag << endl;
     cout << "              OP A:      " << setw(3) << setfill('0') << ALUA << " \t OP B:      " << setw(3) << setfill('0') << ALUB << endl;
     cout << endl;
     cout << "GPAIO Status: Value:     " << setw(3) << setfill('0') << gpaioBus << "\t Address:   " << setw(3) << setfill('0') << gpaioAdr << endl;
@@ -182,11 +183,33 @@ void BusIn(){
 void ALU(){
     if(ALUOP == 0 || ALUOP == 4){ALUout =  ALUA + ALUB; write = ALUout;}
     if(ALUOP == 1 || ALUOP == 5){ALUout = -ALUA + ALUB; write = ALUout;}
+    //set condition flags for arithmetic operations
+    if(opcode <= 7){
+        ALUflag = 0;
+        if(ALUout == 0){
+            ALUflag += 4;
+        }
+        if(ALUB < ALUA){
+            ALUflag += 1;
+        }
+        if(ALUout > 255 || ALUout < 0){
+            ALUflag += 2;
+        }
+    }
+    
 }
 
 void Flow(){
-    if(opcode == 12){
+    if(opcode == 12){   //GOTO
         pc = ALUout;
+    } else if(opcode == 14){ //BRC
+        //if flag is true, skip next instruction
+        if(instArgB & ALUflag){
+            pc++;
+        }
+        pc++;
+    } else if(opcode == 15){
+        return;
     } else {
         pc++;
     }
@@ -206,6 +229,7 @@ void loop(){
     pc = 0;
     while(true){
         system("clear");
+        cout << "PC: " << pc << endl;
         zero();
 
         InstructionProcessor();
