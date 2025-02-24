@@ -11,14 +11,15 @@ using namespace std;
 
 //global control variables
 int speed;
+bool step = false;
 
 //global component variables
 ifstream fin;
 string ROM[255];
 int cache[16];
-int memory[255];
+int memory[256];
 int cacheUpdate[16];
-int memoryUpdate[255];
+int memoryUpdate[256];
 
 //global bus variables
 int readAdrA;
@@ -34,10 +35,11 @@ int ALUB;
 int ALUout;
 int ALUflag;
 
-int gpaioBus;
+int gpaioBusIn;
+int gpaioBusOut;
 int gpaioAdr;
 
-int pc;
+int pc = 0;
 int opcode;
 int instArgA;
 int instArgB;
@@ -58,13 +60,16 @@ void zero(){
     ALUB = 0;
     ALUout = 0;
 
-    gpaioBus = 0;
+    gpaioBusIn = 0;
+    gpaioBusOut = 0;
     gpaioAdr = 0;
 
     opcode = 0;
     instArgA = 0;
     instArgB = 0;
     instArgC = 0;
+
+    cache[0] = 0;
 }
 
 void printState(){
@@ -75,7 +80,7 @@ void printState(){
     cout << "ALU Status:   " << "OP:          " << ALUOP << " \t Output:    " << setw(3) << setfill('0') << ALUout << " \t Flag:     " << setw(3) << setfill('0') << ALUflag << endl;
     cout << "              OP A:      " << setw(3) << setfill('0') << ALUA << " \t OP B:      " << setw(3) << setfill('0') << ALUB << endl;
     cout << endl;
-    cout << "GPAIO Status: Value:     " << setw(3) << setfill('0') << gpaioBus << "\t Address:   " << setw(3) << setfill('0') << gpaioAdr << endl;
+    cout << "GPAIO Status: Value In:  " << setw(3) << setfill('0') << gpaioBusIn << "\tValueOut:   " << setw(3) << setfill('0') << gpaioBusOut << "\t\t Address:   " << setw(3) << setfill('0') << gpaioAdr << endl;
     cout << "Inst " << setw(3) << setfill('0') << pc << ": " << setw(2) << setfill('0') <<  opcode << " " << setw(2) << setfill('0') <<  instArgA << " " << setw(2) << setfill('0') <<  instArgB << " " << setw(2) << setfill('0') <<  instArgC << endl;
     cout << endl;
     cout << "Cache   | RAM" << endl;
@@ -99,8 +104,8 @@ void printState(){
             } else {
                 color = "\033[0m";
             }
-                cout << "\033[90m" << setw(3) << setfill('0') << (16*j) + i << ":" << color << setw(3) << setfill('0') << memory[(16*j) + i] << "\033[0m" << "  ";
-            }
+            cout << "\033[90m" << setw(3) << setfill('0') << ((16*j) + i) << ":" << color << setw(3) << setfill('0') << memory[(16*j) + i] << "\033[0m" << "  ";
+        }
         cout << endl;
     }
 }
@@ -245,21 +250,35 @@ void Write(){
 
     cache[0] = 0;
 }
-/*TODO: reimplement this logic so that bus simulation works
-*/
+
+void RamLoad(){
+    cache[instArgC] = gpaioBusOut;
+    cacheUpdate[instArgC] = 1;
+}
+
+void RamStore(){
+    memory[gpaioAdr] = gpaioBusIn;
+    memoryUpdate[gpaioAdr] = 1;
+}
+
+//Handles GPAIO Bus, assumes all addresses are for RAM
 void GPAIO(){
     if(opcode == 8){
-        cache[instArgC] = memory[instArgA*16 + instArgB];
-        cacheUpdate[instArgC] = 1;
+        gpaioAdr = instArgA*16 + instArgB;
+        gpaioBusOut = memory[gpaioAdr];
+        RamLoad();
     } else if(opcode == 9){
-        memory[instArgA*16 + instArgB] = cache[instArgC];
-        memoryUpdate[instArgA*16 + instArgB] = 1;
+        gpaioAdr = instArgA*16 + instArgB;
+        gpaioBusIn = cache[instArgC];
+        RamStore();
     } else if(opcode == 10){
-        cache[instArgC] = memory[cache[instArgB]];
-        cacheUpdate[instArgC] = 1;
+        gpaioAdr = cache[instArgB];
+        gpaioBusOut = memory[gpaioAdr];
+        RamLoad();
     } else if(opcode == 11){
-        memory[cache[instArgB]] = cache[instArgC];
-        memoryUpdate[cache[instArgB]] = 1;
+        gpaioAdr = cache[instArgB];
+        gpaioBusIn = cache[instArgC];
+        RamStore();
     }
 }
 
@@ -279,16 +298,18 @@ void loop(){
         Flow();
 
         printState();
+        cout << "Iteration: " << iteration << endl;
+        iteration++;
         if(opcode == 15){
             cout << "END signal received from code: exiting..." << endl;
             this_thread::sleep_for(chrono::seconds(2));
             return;
-        } else { 
-            cout << "Iteration: " << iteration << endl;
-            iteration++;
-            this_thread::sleep_for(chrono::milliseconds(speed));
         }
-        //cin.get();
+        this_thread::sleep_for(chrono::milliseconds(speed));
+        if(step){
+            cin.get();
+        }
+        
     }
     
 }
@@ -298,8 +319,8 @@ void Randomize(){
     for(int i = 0; i < 16; i++){    
         cache[i] = rand() % 255;
     }
-    for(int i = 0; i < 255; i++){    
-        memory[i] = rand() % 255;
+    for(int i = 0; i < 256; i++){    
+        memory[i] = rand() % 256;
     }
 }
 
@@ -323,6 +344,12 @@ int main(int argc, char **argv){
     cin >> input;
     if(tolower(input) == 'y'){
         Randomize();
+    }
+    cout << "Step by step? (y/n): ";
+    cin >> input;
+    if(tolower(input) == 'y'){
+        step = true;
+        speed = 2000;
     }
     speed = 1000/speed;
 

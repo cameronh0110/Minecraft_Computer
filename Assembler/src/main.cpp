@@ -10,9 +10,12 @@
 
 using namespace std;
 
-//map global variables
+//map for instructions variables
 unordered_map<string, string> inst_map;
 unordered_map<string, function<string(vector<string>&)>> asm_map;
+
+//map for %tags
+unordered_map<string, int> tag_map;
 
 //returns binary string format of given number
 string ToBinary(string input, int digits){
@@ -108,6 +111,72 @@ void Init_Assembler_Map(){
     asm_map["END"]      = GenericOp;
 }
 
+/*opens file and saves each line with an instruction to a vector of strings
+*/
+vector<string> GenerateLineList(string filename){
+    vector<string> ret; // vector to return
+    string input;       // input string
+
+    ifstream fin;
+    fin.open(filename);
+    if(!fin.is_open()){
+        cout << "ERROR: could not open input file " << filename << endl;
+        return ret; // return empty vector if failed
+    }
+
+    while(!fin.eof()){
+        //read line
+        getline(fin, input);
+        if(!input.empty() && input[0] != '\n' && input[0] != '#'){
+            //input += "\n";
+            ret.push_back(input);
+        }
+    }
+    return ret;
+}
+
+vector<string> DeComment(vector<string> input){
+    vector<string> ret;
+    for(int i = 0; i < input.size(); i++){
+        ret.push_back(input.at(i).substr(0, input.at(i).find('#')));
+    }
+    return ret;
+}
+
+vector<string> ReadTags(vector<string> input){
+    vector<string> ret;
+
+    //add tags to the map, and remove them from the beginning of the tag map
+    for(int i = 0; i < input.size(); i++){
+        if(input.at(i)[0] == '%'){
+            tag_map[input.at(i).substr(0, input.at(i).find(' '))] = i;
+            input.at(i) = input.at(i).substr(input.at(i).find(' '), input.at(i).length());
+        }
+    }
+    return input;
+}
+
+//converts vector of line strings to a vector of token vectors, and processes tag arguments
+vector<vector<string>> Tokenize(vector<string> input){
+    vector<vector<string>> ret;
+    string read;
+    for(int i = 0; i < input.size(); i++){
+        vector<string> tokens;
+        read = input.at(i);
+        istringstream stream(read);
+        //tokenize line
+        while(stream >> read){
+            //replace tag with mapped value
+            if(tag_map[read]){
+                read = to_string(tag_map[read]);
+            }
+            tokens.push_back(read);
+        }
+        ret.push_back(tokens);
+    }
+    return ret;
+}
+
 int main(int argc, char **argv){
     /*
     Gaurd cases and filename processing
@@ -136,6 +205,14 @@ int main(int argc, char **argv){
     */
     Init_Inst_Map();
     Init_Assembler_Map();
+
+    /*
+    Generate line list
+    */
+    vector<string> lines = GenerateLineList(inputFileName);
+    lines = DeComment(lines);
+    lines = ReadTags(lines);
+    vector<vector<string>> tokenizedLines = Tokenize(lines);
 
     /*
     File management
