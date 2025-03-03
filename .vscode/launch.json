@@ -1,15 +1,16 @@
 {
   "version": "0.2.0",
   "configurations": [
+    
     {
       "name": "C/C++ Runner: Debug Session",
       "type": "cppdbg",
       "request": "launch",
-      "args": [],
+      "args": ["memtest.mcasm"],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Virtual_Machine/src",
-      "program": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Virtual_Machine/src/build/Debug/outDebug",
+      "cwd": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Assembler/src",
+      "program": "/home/camryn/Documents/minecraft computer/Minecraft_Computer/Assembler/src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

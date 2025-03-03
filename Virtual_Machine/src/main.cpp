@@ -261,7 +261,7 @@ void RamStore(){
     memoryUpdate[gpaioAdr] = 1;
 }
 
-//Handles GPAIO Bus, assumes all addresses are for RAM
+//Handles GPAIO Bus, assumes all addresses are for RAM, with both read and write access
 void GPAIO(){
     if(opcode == 8){
         gpaioAdr = instArgA*16 + instArgB;

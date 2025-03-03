@@ -56,7 +56,7 @@ string GenericOp(vector<string> &tokens){
         tokens.push_back("0");
     }
 
-    if(tokens.size() != 3){cout << "ERROR: Incorrect number of arguments" << endl; return "ERR";}
+    if(tokens.size() != 3){cout << "ERROR: Incorrect number of arguments " << tokens.size() << endl; return "ERR";}
 
     //convert instruction into binary machine code
     ret = inst_map[tokens.at(0)] + ToBinary(tokens.at(1), 8).substr(0, 4) + " " + ToBinary(tokens.at(1), 8).substr(4) + " " + ToBinary(tokens.at(2), 4) + " ";
@@ -127,6 +127,12 @@ vector<string> GenerateLineList(string filename){
     while(!fin.eof()){
         //read line
         getline(fin, input);
+
+        //remove leading whitespace
+        while(!input.empty() && isspace(input[0])){
+            input.erase(0,1);
+        }
+
         if(!input.empty() && input[0] != '\n' && input[0] != '#'){
             //input += "\n";
             ret.push_back(input);
@@ -143,9 +149,20 @@ vector<string> DeComment(vector<string> input){
     return ret;
 }
 
+//combines tag lines with following lines
+vector<string> CombineLines(vector<string> input){
+    vector<string> ret = input;
+    for(int i = 0; i < ret.size(); i++){
+        if(ret.at(i)[0] == '%'){
+            ret[i + 1] = ret[i] + " " + ret[i + 1];
+            ret.erase(ret.begin() + i);
+        }
+    }
+    return ret;
+}
+
 vector<string> ReadTags(vector<string> input){
     vector<string> ret;
-
     //add tags to the map, and remove them from the beginning of the tag map
     for(int i = 0; i < input.size(); i++){
         if(input.at(i)[0] == '%'){
@@ -167,7 +184,7 @@ vector<vector<string>> Tokenize(vector<string> input){
         //tokenize line
         while(stream >> read){
             //replace tag with mapped value
-            if(tag_map[read]){
+            if(tag_map.find(read) != tag_map.end()){
                 read = to_string(tag_map[read]);
             }
             tokens.push_back(read);
@@ -177,12 +194,55 @@ vector<vector<string>> Tokenize(vector<string> input){
     return ret;
 }
 
+vector<string> AssembleLineVector(vector<vector<string>> input){
+    vector<string> ret;
+    string assembled;
+    for(int i = 0; i < input.size(); i++){
+        if(asm_map.find(input[i][0]) != asm_map.end()){
+            assembled = asm_map[input[i][0]](input[i]);
+        } else {
+            throw runtime_error("On line: " + to_string(i) + " Instruction " + input[i][0] + " is not a valid instruction");
+        }
+        ret.push_back(assembled);
+    }
+    return ret;
+}
+
+/*
+outputs the binary code in an easily transferable text format so that code may be copied by hand
+*/
+void printTransferableOutput(vector<string> asmLines, vector<string> binLines){
+    cout << endl << "___________Human Transferable Output___________" << endl;
+    for(int i = 0; i < asmLines.size(); i++){
+        string tag = "";
+        for (const auto& [key, value] : tag_map)
+            if (value == i)
+                tag = key;
+
+        cout << setw(3) << right << i << ": " << setw(25) << left << asmLines[i].substr(asmLines[i].find_first_not_of(" \t")) << binLines[i] << " " << tag << endl;
+    }
+}
+
+bool writeFile(vector<string> inputVector, string filename){
+    ofstream fout;
+    fout.open(filename);
+    if(!fout.is_open()){
+        throw("could not open input file " + filename);
+    }
+
+    for(int i = 0; i < inputVector.size(); i++){
+        fout << inputVector[i] << endl;
+    }
+
+    return 1;
+}
+
 int main(int argc, char **argv){
     /*
     Gaurd cases and filename processing
     */
     //check if file provided
-    if(!argc){
+    if(argc < 2){
         cout << "ERROR: No File Provided\n";
         return 0;
     }
@@ -209,88 +269,48 @@ int main(int argc, char **argv){
     /*
     Generate line list
     */
-    vector<string> lines = GenerateLineList(inputFileName);
-    lines = DeComment(lines);
-    lines = ReadTags(lines);
-    vector<vector<string>> tokenizedLines = Tokenize(lines);
+    vector<string> lines;
+    vector<string> assembledLines;
+    vector<vector<string>> tokenizedLines;
 
-    /*
-    File management
-    */
-    ifstream fin;
-    ofstream fout;
-    string read;
-    string out;
-
-    fin.open(inputFileName);
-    fout.open(outputFileName);
-
-    if(!fin.is_open()){
-        cout << "ERROR: could not open input file " << inputFileName << endl;
-        return 0;
-    }
-    if(!fout.is_open()){
-        cout << "ERROR: could not open output file " << outputFileName << endl;
-        return 0;
-    }
-
-    /*
-    Read and process file
-    */
-    int outLine = 0;        //line of the output file
-    int inLine = 0;         //line from input file being process
-    bool success = true;    //bool for success
-    vector<string> errors;  //stores errors to output after completion
-    cout << "___Human Transferable Output___________________________________" << endl;
-    while(!fin.eof()){
-        //read line and create a vector of tokens
-        getline(fin, read);
-        inLine++;
-
-        vector<string> tokens;
-        istringstream stream(read);
-
-        //tokenize line, rejecting blank lines, and comments (anything after a '#')
-        while(stream >> read && read.at(0) != '#' && read != ""){
-            tokens.push_back(read);
-        }
-
-        //if there are valid tokens, process and output them. Output is a string, as the binary code must be manually copied to ROM in game
-        string assembled;   //assembled instruction
-        string error;       //error code
-        if(tokens.size()){
-            //assemble line or return error
-            if(asm_map.find(tokens.at(0)) != asm_map.end()){
-                assembled = asm_map[tokens.at(0)](tokens);
-            } else {
-                assembled = "XXXX XXXX XXXX XXXX ";
-                error = "Error at line " + to_string(inLine) + " Invalid Instruction";
-                errors.push_back(error);
-                success = false;
+    //assemble code
+    try{
+        lines = GenerateLineList(inputFileName);
+        lines = DeComment(lines);
+        lines = CombineLines(lines);
+        lines = ReadTags(lines);
+        tokenizedLines = Tokenize(lines);
+        assembledLines = AssembleLineVector(tokenizedLines);
+    } catch (const exception& e){
+        cout << "Processed lines: " << endl;
+        try{
+            for(int i = 0; i < lines.size(); i++){
+                cout << right << setw(3) << i << ":  " << lines[i] << endl;
             }
-            fout << assembled << endl;
-            cout << setw(3) << setfill('0') << outLine << " | " << assembled << "| ";
-            for(int i = 0; i < tokens.size(); i++){
-                cout << setw(8) << setfill(' ') << tokens.at(i) << " ";
-            };
-            cout << endl;
-            
-            outLine++;
+        } catch (const exception& e2){
+            cout << "Could not output processed lines due to exception: " << e.what() << endl;
         }
+        cout << "ERROR: Assembly failed." << endl;
+        cout << "EXCEPTION: " << e.what() << endl;
+        return 1;
+    }
+
+    /*
+    output
+    */
+    try{
+        //human transferable output
+        printTransferableOutput(lines, assembledLines);
+        //vm readable output
+        writeFile(assembledLines, outputFileName);
+        cout << "File assembled to " << outputFileName << endl;
+        cout << "See above for human transferable machine code" << endl;
+        return 0;
+    } catch (const exception& e){
+        cout << "ERROR: Output Failed" << endl;
+        cout << "EXCEPTION: " << e.what();
     }
     
-    /*
-    print diagnostic info
-    */
-    cout << endl;
-    for(int i = 0; i < errors.size(); i++){
-        cout << errors.at(i) << endl;
-    }
-    if(!success){
-        cout << endl << "Assembly failed, check log for details" << endl << endl;
-    } else {
-        cout << "Successfully compiled to " << outputFileName << endl << endl;
-    }
-    return 1;
+
 
 }
