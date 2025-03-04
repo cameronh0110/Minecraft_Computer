@@ -293,6 +293,7 @@ void GPAIO(){
 void loop(){
     pc = 0;
     while(true){
+        auto start = chrono::high_resolution_clock::now();
         system("clear");
         cout << "PC: " << pc << endl;
         zero();
@@ -310,10 +311,11 @@ void loop(){
         iteration++;
         if(opcode == 15){
             cout << "END signal received from code: exiting..." << endl;
-            this_thread::sleep_for(chrono::seconds(2));
             return;
         }
-        this_thread::sleep_for(chrono::milliseconds(speed));
+        auto stop = chrono::high_resolution_clock::now();
+        auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
+        this_thread::sleep_for(chrono::nanoseconds(speed - duration.count()));
         if(step){
             cin.get();
         }
@@ -364,9 +366,17 @@ int main(int argc, char **argv){
         step = true;
         speed = 2000;
     }
-    speed = 1000/speed;
+    speed = 1000000000/speed;
 
+    //run program
+    auto start = chrono::high_resolution_clock::now();
     loop();
+    auto stop = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::nanoseconds>(stop - start);
+    cout << "Program finished after: " << (float)duration.count()/1000000000 << " seconds" << endl;
+    cout << "Actual Execution rate:  " << (float)iteration/((float)duration.count()/1000000000) << " Hrtz" << endl;
+
+    this_thread::sleep_for(chrono::seconds(2));
 
     return 0;
 }
