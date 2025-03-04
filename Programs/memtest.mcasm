@@ -1,0 +1,65 @@
+#Memory Testing program
+#This program is intended to identify any memory faults that may be present
+#Implements the checkerboarding algorithm
+#If a fault occurs, the program will output the address and stop
+#Display 1: Address being tested
+#Display 2: Address of fault
+
+#DATA LAYOUT
+#   reg01:  current address
+#   reg02:  end address
+#   reg03:  test pattern 1 (170, 10101010)
+#   reg04:  test pattern 2 (85,  01010101)
+#   reg05:  memory load value
+#   reg15:  return pointer
+GOTO %MAIN  0
+
+#Test cell
+%TESTC
+    #Test condition 1
+    STUR-PTR    1   3   #Set cell to test val 1
+    LDUR-PTR    1   5   #load
+    SUB     3   5   0   #test if value is correct
+    BRC     4           #if not zero
+    STUR-ADR    255 0   #Display failed address
+
+    #Test condition 2
+    STUR-PTR    1   4   #Set cell to test val 1
+    LDUR-PTR    1   5   #load
+    SUB     4   5   0   #test if value is correct
+    BRC     4           #if not zero
+    END
+
+    #Zero test
+    STUR-PTR    1   0   #Set cell to test val 1
+    LDUR-PTR    1   5   #load
+    SUB     0   5   0   #test if value is correct
+    BRC     4           #if not zero
+    END
+
+    GOTO    2       15  #return
+
+
+
+%MAIN
+#Initialize Variables
+    ADD     0   0   1
+    ADD     0   0   2
+    ADD     0   0   3
+    ADD     0   0   4
+    ADD     0   0   5
+    ADDI    252     2
+    ADDI    170     3
+    ADDI    85      4
+    STUR-ADR    254 0   #Clear display settings
+    STUR-ADR    255 0   #Display Clear display
+%LOOP
+    GOTO-PTR        15  #save function return address
+    GOTO    %TESTC  0   #test address
+    ADDI    1       1   #increment address
+    SUB     2   1   0   #if address < 252, loop back
+    BRC     4          
+    GOTO    %LOOP   0   
+
+%END
+    END

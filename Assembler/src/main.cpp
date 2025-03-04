@@ -257,7 +257,7 @@ int main(int argc, char **argv){
     if(argc > 2){
         outputFileName = argv[2];
     } else {
-        outputFileName = inputFileName.substr(0, inputFileName.find('.')) + ".mcbin";
+        outputFileName = inputFileName.substr(0, inputFileName.find('.')) + ".mcrom";
     }
 
     /*

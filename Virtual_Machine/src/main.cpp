@@ -70,6 +70,9 @@ void zero(){
     instArgC = 0;
 
     cache[0] = 0;
+
+    //memory failure test code
+    //memory[12] = 85;
 }
 
 void printState(){
@@ -149,6 +152,7 @@ void SetAddrLines(){
         readA = cache[readAdrA];
         readB = cache[readAdrB];
         writeAdr = instArgC;
+    //ALU Immediate
     } else if(opcode <= 7){
         readAdrA = instArgA;
         readAdrB = instArgC;
@@ -207,6 +211,10 @@ void BusIn(){
 void ALU(){
     if(ALUOP == 0 || ALUOP == 4){ALUout =  ALUA + ALUB; write = ALUout;}
     if(ALUOP == 1 || ALUOP == 5){ALUout = -ALUA + ALUB; write = ALUout;}
+    if(ALUOP == 2){ALUout = ALUA ^ ALUB; write = ALUout;}
+    if(ALUOP == 3){ALUout = ALUA & ALUB; write = ALUout;}
+    if(ALUOP == 6){ALUout = ALUB << 1; write = ALUout;}
+    if(ALUOP == 7){ALUout = ALUB >> 1; write = ALUout;}
     //set condition flags for arithmetic operations
     if(opcode <= 7){
         ALUflag = 0;
@@ -331,6 +339,11 @@ int main(int argc, char **argv){
         return 1;
     }
     string fileName = argv[1];
+    string inputFileName = argv[1];
+    if(inputFileName.substr(inputFileName.find('.'), inputFileName.length()) != ".mcrom"){
+        cout << "ERROR: Filename must end in .mcrom\n";
+        return 1;
+    }
     fin.open(fileName);
     if(!fin.is_open()){
         cout << "Error: Could not open file" << endl;
@@ -355,5 +368,5 @@ int main(int argc, char **argv){
 
     loop();
 
-    return 1;
+    return 0;
 }

@@ -1,0 +1,66 @@
+#Fibonacci Sequence Test
+#This program implements the fibonacci sequence
+#It was developed to test the CPU, memory, and other systems, along with the assembler itself
+#Numbers are displayed by writing them to memory address 255, which will be linked to a display
+#Each number will be written to a list in RAM
+#After completion, the each list element will be displayed in normal and reverse order to test RAM read
+
+#===DATA LAYOUT===
+#Cache:
+#   reg00: zero register
+#   reg01: current fibbonacci number
+#   reg02: next fibbonacci number
+#   reg03: temp variable
+#   reg04: loop counter
+#   reg12: ram list pointer
+#   reg14: stack pointer
+#   reg15: return pointer
+
+%MAIN
+#Variable initialization
+    ADD     0   0   12  #Pointer to start of list in RAM
+    ADDI    16      12  #List starts at byte 16
+    ADD     0   0   1   #a
+    ADD     0   0   2   #b
+    ADDI    1       2   #Set b to 1
+    ADD     0   0   3   #temp
+    ADD     0   0   4   #i
+    ADDI    13      4   #count down from 13
+
+#LOGIC SECTION
+    STUR-PTR    12  1   #add reg 1 to the list
+    ADDI    1       12  #increment list pointer
+
+#perform fibbonacci sequence
+%LOOP1
+    ADD     1   2   3   #temp = a + b
+    ADD     0   2   1   #a = b
+    ADD     0   3   2   #b = temp
+    STUR-ADR    255 1   #output r1 to display
+
+    STUR-PTR    12  1   #add reg 1 to the list
+    ADDI    1       12  #increment list pointer
+
+    SUBI    1       4   #i--
+    BRC             4   #skip if zero
+    GOTO    %LOOP1  0   #Goto start of loop
+
+#output list from memory in reverse order
+    ADDI    14      4   #reset loop counter for reverse loop
+%LOOP2
+    SUBI    1       12  #decrement memory address
+
+    LDUR-PTR    12  1   #load value from memory address
+    STUR-ADR    255 1   #copy loaded value to address 255
+
+    SUBI    1       4   #decrement i
+    BRC             4
+    GOTO    %LOOP2  0   #loop back
+
+    END
+
+
+
+          
+
+    
