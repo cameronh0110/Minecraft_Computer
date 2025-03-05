@@ -22,28 +22,28 @@ int cacheUpdate[16];
 int memoryUpdate[256];
 
 //global bus variables
-int readAdrA;
-int readAdrB;
-int writeAdr;
-int readA;
-int readB;
-int write;
+uint8_t readAdrA;
+uint8_t readAdrB;
+uint8_t writeAdr;
+uint8_t readA;
+uint8_t readB;
+uint8_t write;
 
-int ALUOP;
-int ALUA;
-int ALUB;
-int ALUout;
-int ALUflag;
+uint8_t ALUOP;
+uint8_t ALUA;
+uint8_t ALUB;
+uint8_t ALUout;
+uint8_t ALUflag;
 
-int gpaioBusIn;
-int gpaioBusOut;
-int gpaioAdr;
+uint8_t gpaioBusIn;
+uint8_t gpaioBusOut;
+uint8_t gpaioAdr;
 
-int pc = 0;
-int opcode;
-int instArgA;
-int instArgB;
-int instArgC;
+uint8_t pc = 0;
+uint8_t opcode;
+uint8_t instArgA;
+uint8_t instArgB;
+uint8_t instArgC;
 
 int iteration = 0;
 
@@ -77,14 +77,14 @@ void zero(){
 
 void printState(){
     string color = "\033[0m";
-    cout << "Cache Status: " << "Read Adr A: " << setw(2) << setfill('0') << readAdrA << " \t Read Adr B: " << setw(2) << setfill('0') << readAdrB << " \t Write Adr: " << setw(2) << setfill('0') << writeAdr << endl;
-    cout << "              Read A:    " << setw(3) << setfill('0') << readA << " \t Read B:    " << setw(3) << setfill('0') << readB << " \t Write:    " << setw(3) << setfill('0') << write << endl;
+    cout << "Cache Status: " << "Read Adr A: " << setw(2) << setfill('0') << (uint)readAdrA << " \t Read Adr B: " << setw(2) << setfill('0') << (uint)readAdrB << " \t Write Adr: " << setw(2) << setfill('0') << (uint)writeAdr << endl;
+    cout << "              Read A:    " << setw(3) << setfill('0') << (uint)readA << " \t Read B:    " << setw(3) << setfill('0') << (uint)readB << " \t Write:    " << setw(3) << setfill('0') << (uint)write << endl;
     cout << endl;
-    cout << "ALU Status:   " << "OP:          " << ALUOP << " \t Output:    " << setw(3) << setfill('0') << ALUout << " \t Flag:     " << setw(3) << setfill('0') << ALUflag << endl;
-    cout << "              OP A:      " << setw(3) << setfill('0') << ALUA << " \t OP B:      " << setw(3) << setfill('0') << ALUB << endl;
+    cout << "ALU Status:   " << "OP:          " << (uint)ALUOP << " \t Output:    " << setw(3) << setfill('0') << (uint)ALUout << " \t Flag:     " << setw(3) << setfill('0') << (uint)ALUflag << endl;
+    cout << "              OP A:      " << setw(3) << setfill('0') << (uint)ALUA << " \t OP B:      " << setw(3) << setfill('0') << (uint)ALUB << endl;
     cout << endl;
-    cout << "GPAIO Status: Value In:  " << setw(3) << setfill('0') << gpaioBusIn << "\tValueOut:   " << setw(3) << setfill('0') << gpaioBusOut << "\t\t Address:   " << setw(3) << setfill('0') << gpaioAdr << endl;
-    cout << "Inst " << setw(3) << setfill('0') << pc << ": " << setw(2) << setfill('0') <<  opcode << " " << setw(2) << setfill('0') <<  instArgA << " " << setw(2) << setfill('0') <<  instArgB << " " << setw(2) << setfill('0') <<  instArgC << endl;
+    cout << "GPAIO Status: Value In:  " << setw(3) << setfill('0') << (uint)gpaioBusIn << "\tValueOut:   " << setw(3) << setfill('0') << (uint)gpaioBusOut << "\t\t Address:   " << setw(3) << setfill('0') << (uint)gpaioAdr << endl;
+    cout << "Inst " << setw(3) << setfill('0') << (uint)pc << ": " << setw(2) << setfill('0') <<  (uint)opcode << " " << setw(2) << setfill('0') <<  (uint)instArgA << " " << setw(2) << setfill('0') <<  (uint)instArgB << " " << setw(2) << setfill('0') <<  (uint)instArgC << endl;
     cout << endl;
     cout << "Cache   | RAM" << endl;
     cout << "________|_______________________________________________________________________________________________________________________________________________" << endl;
@@ -97,7 +97,7 @@ void printState(){
         } else {
             color = "\033[0m";
         }
-        cout << "\033[90m" << setw(2) << setfill('0') << i << "| " << color << setw(3) << setfill('0') << (int)cache[i] << "\033[0m | ";
+        cout << "\033[90m" << setw(2) << setfill('0') << i << "| " << color << setw(3) << setfill('0') << (uint)cache[i] << "\033[0m | ";
         for(int j = 0; j < 16; j++){
             if(memoryUpdate[(16*j) + i] == 1){
                 color = "\033[33m";
@@ -107,7 +107,7 @@ void printState(){
             } else {
                 color = "\033[0m";
             }
-            cout << "\033[90m" << setw(3) << setfill('0') << ((16*j) + i) << ":" << color << setw(3) << setfill('0') << (int)memory[(16*j) + i] << "\033[0m" << "  ";
+            cout << "\033[90m" << setw(3) << setfill('0') << ((16*j) + i) << ":" << color << setw(3) << setfill('0') << (uint)memory[(16*j) + i] << "\033[0m" << "  ";
         }
         cout << endl;
     }
@@ -295,7 +295,7 @@ void loop(){
     while(true){
         auto start = chrono::high_resolution_clock::now();
         system("clear");
-        cout << "PC: " << pc << endl;
+        cout << "PC: " << (uint)pc << endl;
         zero();
 
         InstructionProcessor();
