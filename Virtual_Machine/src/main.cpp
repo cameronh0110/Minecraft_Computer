@@ -16,8 +16,8 @@ bool step = false;
 //global component variables
 ifstream fin;
 string ROM[255];
-int cache[16];
-int memory[256];
+uint8_t cache[16];
+uint8_t memory[256];
 int cacheUpdate[16];
 int memoryUpdate[256];
 
@@ -97,7 +97,7 @@ void printState(){
         } else {
             color = "\033[0m";
         }
-        cout << "\033[90m" << setw(2) << setfill('0') << i << "| " << color << setw(3) << setfill('0') << cache[i] << "\033[0m | ";
+        cout << "\033[90m" << setw(2) << setfill('0') << i << "| " << color << setw(3) << setfill('0') << (int)cache[i] << "\033[0m | ";
         for(int j = 0; j < 16; j++){
             if(memoryUpdate[(16*j) + i] == 1){
                 color = "\033[33m";
@@ -107,7 +107,7 @@ void printState(){
             } else {
                 color = "\033[0m";
             }
-            cout << "\033[90m" << setw(3) << setfill('0') << ((16*j) + i) << ":" << color << setw(3) << setfill('0') << memory[(16*j) + i] << "\033[0m" << "  ";
+            cout << "\033[90m" << setw(3) << setfill('0') << ((16*j) + i) << ":" << color << setw(3) << setfill('0') << (int)memory[(16*j) + i] << "\033[0m" << "  ";
         }
         cout << endl;
     }
@@ -310,6 +310,7 @@ void loop(){
         cout << "Iteration: " << iteration << endl;
         iteration++;
         if(opcode == 15){
+            //printState();
             cout << "END signal received from code: exiting..." << endl;
             return;
         }

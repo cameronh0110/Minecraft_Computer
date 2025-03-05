@@ -212,7 +212,7 @@ vector<string> AssembleLineVector(vector<vector<string>> input){
 outputs the binary code in an easily transferable text format so that code may be copied by hand
 */
 void printTransferableOutput(vector<string> asmLines, vector<string> binLines){
-    cout << endl << "___________Human Transferable Output___________" << endl;
+    cout << endl << "____________Human Transferable Output____________" << endl;
     for(int i = 0; i < asmLines.size(); i++){
         string tag = "";
         for (const auto& [key, value] : tag_map)

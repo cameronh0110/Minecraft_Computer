@@ -11,7 +11,7 @@ SRC_DIR := src
 CC := g++
 
 #compiler flags
-CFLAGS := -Wall -Wextra
+CFLAGS := -O3 -Wall -Wextra
 
 #list of objects
 OBJ :=  $(BUILD_DIR)/main.o 
